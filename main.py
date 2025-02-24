@@ -92,6 +92,7 @@ def parse_all_data():
         # TODO playwright install
         # TODO conda install -c conda-forge geopandas=0.14.4
 
+        # TODO: Readme.md
         # TODO warning:
         # 1.6 GB each zip
         # 6.7 GB each extracted zip
@@ -107,7 +108,12 @@ def parse_all_data():
 
 
 def extract_all_data():
-    for saved_file in saved_files:
+    folders = [os.path.join('input', folder) for folder in os.listdir('input')]
+
+    zip_files = [folder for folder in folders if folder[-3:] == 'zip']
+    # TODO cambiar saved files por zip folder
+
+    for saved_file in zip_files:
 
         extracted_folder = saved_file[:-4]
         if os.path.exists(extracted_folder):
@@ -124,6 +130,13 @@ def extract_all_data():
         except zipfile.BadZipFile as e:
             print(f"Error al descomprimir el archivo {saved_file}: {e}")
 
+
+
+#def download_file_by_file():
+
+
+
+# TODO permitir descargar por comarcas
 if __name__ == '__main__':
     download_all_data()
     extract_all_data()
