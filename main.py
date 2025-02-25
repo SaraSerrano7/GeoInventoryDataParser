@@ -200,37 +200,67 @@ async def download_file_by_file():
 
 
         # Visit each dataset page and download zip files
+        downloads = []
         for href in dataset_hrefs:
-            dataset_url = f"https://analisi.transparenciacatalunya.cat{href}"
-            print(f"Processing dataset: {dataset_url}")
+            print(f"Processing dataset: {href}")
 
             # Navigate to the dataset page
-            await page.goto(dataset_url)
+            await page.goto(href)
             await page.wait_for_load_state("networkidle")
 
+
             # Find download buttons
-            download_buttons = await page.query_selector_all('a.download')
+            # await page.wait_for_selector('.attachment')
+            download_links = await page.query_selector_all('.attachment a')
+            for link in download_links:
+                target_file = await link.get_attribute('href')
+                downloads.append(referer + target_file) if target_file[-7:] == file_extensions.lower() else None
 
-            for button in download_buttons:
-                button_text = await button.inner_text()
-                href = await button.get_attribute('href')
+            target_download = downloads[-1] if downloads else None
 
-                if href and href.endswith('.zip'):
-                    print(f"Found zip file: {href}")
+            # for link in downloads:
+            nombre_archivo = target_download.split("=")[-1]
+            ruta_destino = os.path.join(download_folder, nombre_archivo)
 
-                    # Click the download button
-                    download_promise = page.wait_for_download()
-                    await button.click()
-                    download = await download_promise
+            if os.path.exists(ruta_destino):
+                print(f"El archivo ya está descargado y guardado en: {ruta_destino}")
+                saved_files.append(ruta_destino)
+                continue
 
-                    # Save the file
-                    filename = download.suggested_filename
-                    download_path = os.path.join(download_folder, filename)
-                    await download.save_as(download_path)
-                    print(f"Downloaded: {filename}")
+            if not os.path.exists(download_folder):
+                os.makedirs(ruta_destino)
 
-                    # Wait a bit to avoid overwhelming the server
-                    await asyncio.sleep(2)
+            comando = ["wget", target_download, "-O", ruta_destino]
+
+            try:
+                subprocess.run(comando, check=True)
+                print(f"Archivo descargado y guardado en: {ruta_destino}")
+                saved_files.append(ruta_destino)
+            except subprocess.CalledProcessError as e:
+                print(f"Ocurrió un error al ejecutar wget: {e}")
+
+            # download_buttons = await page.query_selector_all('a.download')
+
+            # for button in download_buttons:
+            #     button_text = await button.inner_text()
+            #     href = await button.get_attribute('href')
+            #
+            #     if href and href.endswith('.zip'):
+            #         print(f"Found zip file: {href}")
+            #
+            #         # Click the download button
+            #         download_promise = page.wait_for_download()
+            #         await button.click()
+            #         download = await download_promise
+            #
+            #         # Save the file
+            #         filename = download.suggested_filename
+            #         download_path = os.path.join(download_folder, filename)
+            #         await download.save_as(download_path)
+            #         print(f"Downloaded: {filename}")
+            #
+            #         # Wait a bit to avoid overwhelming the server
+            #         await asyncio.sleep(2)
 
         # Close the browser
         await browser.close()
